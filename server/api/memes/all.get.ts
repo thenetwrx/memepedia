@@ -31,20 +31,18 @@ export default defineEventHandler(async (event) => {
   if (!data || !data.length) return { data: [], reached_end: true };
 
   for (const meme of data) {
-    const all_memes_metadata = await supabase
+    const meme_metadata = await supabase
       .schema("storage")
       .from("objects")
-      .select("*");
-    if (!all_memes_metadata) continue;
+      .select("*")
+      .eq("id", meme.id);
 
-    const meme_metadata = all_memes_metadata.data?.find(
-      (meme) => meme.id === meme.id
-    );
-    if (!meme_metadata) continue;
+    if (!meme_metadata || !meme_metadata.data?.length) continue;
 
     const meme_metadata_owner_username = (
-      await supabase.auth.admin.getUserById(meme_metadata.owner)
+      await supabase.auth.admin.getUserById(meme_metadata.data[0].owner)
     ).data.user?.user_metadata.username;
+
     if (!meme_metadata_owner_username) continue;
 
     const urlResponse = await client.storage
@@ -93,7 +91,7 @@ export default defineEventHandler(async (event) => {
           mimetype: meme.metadata.mimetype,
           discussion: data[0],
           author: {
-            id: meme_metadata.owner,
+            id: meme_metadata.data[0].owner,
             username: meme_metadata_owner_username,
           },
         });
